@@ -1,6 +1,6 @@
 ---
 name: munra-pitfalls
-description: Munra's recurring engineering traps, written as rules rather than as history. Load before starting any Munra code task, before opening a Munra pull request, and whenever a verification step behaves oddly - a gate returning 1 from the wrong directory, an integration suite that will not start, a mutation that stays green, or a fixture that fails after a change that was correct. Covers the three-part AI-trailer mechanism in PR bodies, fixing the surface a review actually names, inventory and pin tests, checking open PRs and fresh master first, verifying against the merged tree, running node gates from the repo root, running the integration lane as pgtest, killing leftover embedded postgres, sign-off receipts that cannot be faked, and what a green mutation means. Also use when the captain invokes /munra-pitfalls or asks about "aterkommande problem" or "fallgropar".
+description: Munra's recurring engineering traps, written as rules rather than as history. Load before starting any Munra code task, before opening a Munra pull request, and whenever a verification step behaves oddly - a gate returning 1 from the wrong directory, an integration suite that will not start, a mutation that stays green, or a fixture that fails after a change that was correct. Covers the three-part AI-trailer mechanism in PR bodies, the encoding gate on the PR title and body, fixing the surface a review actually names, reviewing an artefact's format and not only its logic, inventory and pin tests, checking open PRs and fresh master first, verifying against the merged tree, stale-base false reds in the contract check, running node gates from the repo root, files the encoding gate never scans because they are unstaged, running the integration lane as pgtest, killing leftover embedded postgres, abandoned runs that look like failures, sign-off receipts that cannot be faked, what a green mutation means, hand-computed fixtures, and locked checksums. Also use when the captain invokes /munra-pitfalls or asks about "aterkommande problem" or "fallgropar".
 user-invocable: true
 metadata:
   internal: true
@@ -18,8 +18,10 @@ This skill mirrors it, so a change to one belongs in the other.
 
 Three things hang together and are easily confused.
 
-First, `create_pull_request` appends an attribution footer by itself.
-Always run `update_pull_request` with the exact same body immediately after.
+First, `create_pull_request` appends an attribution footer by itself, on the SERVER side.
+What you submitted is not what stands on the page.
+Read the body back from GitHub with `pull_request_read` after submitting, then strip the line with `update_pull_request`.
+Running `check-encoding.mjs --pr-text` locally over the text you wrote is false comfort, because it inspects the wrong copy.
 The PR body is master's commit message, because the repo is set to `PR_TITLE` plus `PR_BODY`.
 
 Second, the `no AI attribution trailer in the PR body` job in `.github/workflows/pr-body.yml` is required on master and fails on a trailer in the TITLE or the BODY.
@@ -27,8 +29,13 @@ A trailer inside a fenced code block is documentation and passes.
 
 Third, the trailer that actually lands does not come from either of those.
 On squash, GitHub derives `Co-authored-by:` from the AUTHORSHIP of the squashed commits, whatever the message setting says.
-Branch commits therefore need human authorship.
+The gate reads only the title and the body, so it cannot see this one at all.
+Branch commits therefore need human authorship, which the repo-local git identity already provides.
+Verify it anyway with `git log --format='%an <%ae>' origin/master..HEAD`.
 That is how 190 banned trailers reached master in #881 and #882.
+
+`git merge` inherits the surrounding identity, and `git merge -c user.name=...` is not a valid flag on merge.
+Use `git -c user.name=... merge`, which is the git-level config override, or rely on the repo-local identity.
 
 There is a standing conflict to know about.
 The stop hook in the Claude Code Remote environment wants `noreply@anthropic.com` as the commit author, which is the opposite of the third point.
@@ -42,12 +49,31 @@ Normal reading of CI: that job often shows a FAILURE on the first run and a SUCC
 The later run is the one that counts, and a green `CI gate` is the proof.
 Do not chase the red row.
 
+## The encoding gate also covers the PR title and body
+
+ASCII plus the six Swedish accented letters ONLY.
+Write `--` rather than an em dash and `->` rather than an arrow, and use no middle dot and no other accents.
+The description becomes master's commit message, which is why it is inspected at all.
+This has caught us twice: once a middle dot, once a misspelled `lasens` carrying the wrong accent.
+
 ## When a review names a surface, fix THAT surface
 
 In #889 the review said `ps-print` was gated only on `isEmpty`.
 The adjacent claim was fixed - the footer wording - and the button was left alone, so an unsigned unapproved draft could still be printed to A4 and handed to a patient.
 hadhud had to fix it.
 A finding is closed only when the surface it points at is fixed or explicitly dismissed with a reason, never because something nearby became correct.
+
+## Review the artefact's format, not only its logic
+
+hadhud found seven defects in `voiceeval` and none in the arithmetic.
+The patterns worth checking every time:
+
+- What does the reader let through? A repeated tag counted the attempt TWICE in its group, and a second JSON value on the same line vanished without trace.
+- What identity does the file carry? A frozen threshold with no model name could be applied to another model's numbers, silently.
+- Is the fingerprint unambiguous? `["a,b"]` and `["a","b"]` shared a digest.
+- What does the artefact CLAIM? Two entirely different states - no counter-evidence at all, versus counter-evidence that missed the budget - rendered identically.
+
+Always ask what happens to malformed input, and whether two different realities can produce the same artefact.
 
 ## A failing test fixture is an ANSWER, not an obstacle
 
@@ -89,10 +115,19 @@ If master moved, merge it in and re-run the gates against the result.
 `git merge-tree` reports "clean" even when 282 files vanished under the branch.
 If the merge is documentation-only a Go verification can stand, but confirm that it is with `git diff --name-only HEAD@{1} HEAD | grep '\.go$'`.
 
+A stale base also surfaces as a false red in the contract check.
+If `proto (contract + generation)` reports "previously present field ... was deleted" for a field your branch never touched, master ADDED that field and your branch is behind.
+Merge master in, re-validate, push.
+Nothing is wrong with the work.
+
 ## Run the node gates from the REPO ROOT
 
 `check-encoding.mjs`, `check-gofmt.mjs`, `validate-architecture-docs.mjs`, and `check-mdsw-boundary.mjs` exit 1 with MODULE_NOT_FOUND when run from `services/api` or `apps/verification-ui-dd`.
 It looks like red and is not.
+
+The encoding gate walks `git ls-files`, so NEW files that are not staged are never scanned at all.
+It then reports the same file count as before and looks green without having read your work.
+Stage first, run second, and check that the file count went up.
 
 ## The integration lane runs as `pgtest`
 
@@ -126,6 +161,12 @@ Check against CI on another PR before chasing them, and remember the converse: a
 A fresh worktree has no `node_modules`, and vitest and playwright fail at startup without them.
 Link them with `ln -s /home/user/Munra/apps/verification-ui-dd/node_modules <worktree>/apps/verification-ui-dd/node_modules`.
 
+## An abandoned run looks like a failure
+
+A run where EVERY track says `cancelled` is a run that was aborted when someone pushed a new commit on top.
+The aggregate gate counts cancelled as not-passed, which is the correct behaviour.
+Do not comment on it; check the current head instead.
+
 ## Sign-off receipts cannot be faked in a test
 
 A trigger validates line membership, hashes, owner, and the audit row TOGETHER at commit time.
@@ -136,9 +177,26 @@ Check also that the test does not already sign off, because `visit_signoff` is u
 
 ## A green mutation is a failed test
 
+Every mutation must be a REVERT to the code's state before the change, so that red-before and green-after is literal.
 When a mutation stays green, ask what in the test DATA makes the assertion non-discriminating.
 Recurring causes: only one vocabulary value pushed end to end; no case outside the permitted set; two different texts where the real case is the same text twice; and negative assertions that pass because the effect has not run yet.
 For that last one, wait on something that PROVES the effect ran.
+Report a mutation that stays green rather than papering over it.
+
+Verify a proposed test value empirically instead of trusting a plan.
+In #232 the plan proposed `0.070731` to expose floating-point rounding, the value did not work, and the mutation would have stayed green.
+The right value was `0.500002`, and the executor found it by trying rather than by trusting.
+
+## A test that recomputes the measure the code's way proves nothing
+
+Use hand-computed cases with the expected answer written in as literals, not property tests that mirror the implementation.
+Make the fixture ASYMMETRIC, for example 4 against 3, so that a swapped numerator and denominator is caught.
+
+## Locked checksums pin what the code DID, not what it SHOULD do
+
+A hash cannot possibly be known before the code that produces it.
+Compute every number in the fixture BY HAND, outside the implementation, and compare those against the artefacts.
+A deterministic wrong answer is still wrong.
 
 ## A silent fallback is a silent untruth
 
