@@ -1,6 +1,6 @@
 ---
 name: munra-pitfalls
-description: Munra's recurring engineering traps, written as rules rather than as history. Load before starting any Munra code task, before opening a Munra pull request, and whenever a verification step behaves oddly - a gate returning 1 from the wrong directory, an integration suite that will not start, a mutation that stays green, or a fixture that fails after a change that was correct. Covers the three-part AI-trailer mechanism in PR bodies, the encoding gate on the PR title and body, fixing the surface a review actually names, reviewing an artefact's format and not only its logic, inventory and pin tests, checking open PRs and fresh master first, verifying against the merged tree, stale-base false reds in the contract check, running node gates from the repo root, files the encoding gate never scans because they are unstaged, running the integration lane as pgtest, killing leftover embedded postgres, abandoned runs that look like failures, sign-off receipts that cannot be faked, what a green mutation means, hand-computed fixtures, and locked checksums. Also use when the captain invokes /munra-pitfalls or asks about "aterkommande problem" or "fallgropar".
+description: Munra's recurring engineering traps, written as rules rather than as history. Load before starting any Munra code task, before opening a Munra pull request, and whenever a verification step behaves oddly - a gate returning 1 from the wrong directory, an integration suite that will not start, a mutation that stays green, or a fixture that fails after a change that was correct. Covers the three-part AI-trailer mechanism in PR bodies, the encoding gate on the PR title and body, fixing the surface a review actually names, reviewing an artefact's format and not only its logic, inventory and pin tests, checking open PRs and fresh master first, verifying against the merged tree, stale-base false reds in the contract check, running node gates from the repo root, files the encoding gate never scans because they are unstaged, running the integration lane as pgtest, killing leftover embedded postgres, abandoned runs that look like failures, sign-off receipts that cannot be faked, what a green mutation means, tests whose input is built by a pipeline and so prove the wrong layer, hand-computed fixtures, and locked checksums. Also use when the captain invokes /munra-pitfalls or asks about "aterkommande problem" or "fallgropar".
 user-invocable: true
 metadata:
   internal: true
@@ -186,6 +186,25 @@ Report a mutation that stays green rather than papering over it.
 Verify a proposed test value empirically instead of trusting a plan.
 In #232 the plan proposed `0.070731` to expose floating-point rounding, the value did not work, and the mutation would have stayed green.
 The right value was `0.500002`, and the executor found it by trying rather than by trusting.
+
+## A test whose input is built by a pipeline proves the wrong layer
+
+This one has bitten four times on the same workstream, and each time the test looked correct and read correctly.
+The shape is always the same: the test builds its input by calling a projection, a client mapper, or any other pipeline step, and that step already satisfies the property the test claims to pin.
+Revert the guard the test names and it stays green, because the guard was never in the path.
+
+Three of the four instances, so the shape is recognisable:
+a dangling-reference guard tested through a projection whose own filter strips the dangling id first;
+a client mapper tested with objects that were already mapped;
+a correction flag asserted as "set directly" while the fixture derived it through a projection plus a corrections array.
+
+Build the input for a unit test BY HAND, with literal values, and call the unit under test directly.
+When the fixture must come from a pipeline because the integration IS the subject, say so in the test and pin the pipeline step separately, so neither can pass on the other's behalf.
+Check it the only way that settles it: revert the guard and watch the test go red.
+
+A related case is a pin that cannot discriminate by construction rather than by accident.
+A test asserting that two lenses AGREE cannot catch a change to the shared rule both call, because agreement survives it; that pin catches a FORK, and the rule's content needs its own directional tests.
+That is a green mutation worth reporting and explaining, not one worth fixing.
 
 ## A test that recomputes the measure the code's way proves nothing
 
