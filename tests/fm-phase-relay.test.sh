@@ -64,3 +64,30 @@ test_skill_exists_agent_only
 test_skill_owns_the_relay
 test_promotion_exception_is_explicit
 test_agents_triggers_present
+
+SETUP="$ROOT/.agents/skills/relay-setup/SKILL.md"
+
+test_setup_skill_is_captain_invocable() {
+  assert_present "$SETUP" "the relay-setup skill exists"
+  assert_grep "name: relay-setup" "$SETUP" "setup skill declares its name"
+  assert_grep "user-invocable: true" "$SETUP" "setup skill must be captain-invocable"
+  pass "relay-setup exists and the captain can run it"
+}
+
+test_setup_skill_defers_to_its_owners() {
+  # One owner per contract: the profile snippet and the label list live elsewhere.
+  assert_grep "owned by \`phase-relay\` section 7" "$SETUP" \
+    "setup must take the profile from phase-relay, not restate it"
+  assert_grep "issue rules, not by this skill" "$SETUP" \
+    "setup must take label names from the project's own rules"
+  # Safety: a home may carry deliberate local routing.
+  assert_grep "never overwrite it silently" "$SETUP" \
+    "setup must not clobber an existing dispatch profile"
+  # The project-write boundary still holds.
+  assert_grep 'Never touch anything under `projects/`' "$SETUP" \
+    "setup must respect the project-write boundary"
+  pass "relay-setup defers to its owners and keeps the write boundaries"
+}
+
+test_setup_skill_is_captain_invocable
+test_setup_skill_defers_to_its_owners
