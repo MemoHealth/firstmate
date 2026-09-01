@@ -233,6 +233,7 @@ Classify the deliverable:
 A diagnostic request, report, recommendation, or implementation-ready finding is evidence, not authorization to change code.
 Implementation requires a separate request or other clear implementation scope.
 Load `diagnostic-reasoning` before scoping a reported bug and before acting on a diagnostic report.
+Load `phase-relay` before dispatching an issue large enough to need a written plan, so its plan, build, and review phases run as separate workers instead of one.
 
 Classify work as dispatchable when it does not overlap work under way, or queued and blocked when it touches the same project subsystem or depends on unlanded work.
 Dispatch independent work immediately with no concurrency cap, serialize coarse overlaps, and record blockers durably.
@@ -312,6 +313,7 @@ Read the report, relay its findings rather than merely saying it finished, recor
 A report may recommend implementation but does not authorize it.
 Before treating the investigation or any visual review as complete, load `decision-hold-lifecycle`; teardown enforces that shared completion gate.
 When implementation is separately authorized, promote the existing scout through `bin/fm-promote.sh` rather than creating a duplicate task.
+Load `phase-relay` before promoting, because while its relay is in force the build is a fresh worker rather than a promoted scout.
 The promoted worker must inventory scratch state, return to a clean default-branch base, carry over only intended fix changes, create the ship branch, and follow the project's selected delivery path.
 Scratch commits and debug edits never ride along, and a reproduced bug becomes the regression test.
 
@@ -470,6 +472,7 @@ These skills are not captain-invocable; load them only at their precise triggers
 - `firstmate-codexapp` - load before coordinating a visible Codex Desktop thread, evaluating a Codex App backend request, or reconciling Codex Desktop host-tool smoke evidence for Firstmate work.
 - `firstmate-coding-guidelines` - load before changing firstmate's shared, tracked material, as defined by section 1's list, whether editing directly or briefing a crewmate for a firstmate-repo task.
 - `munra-architecture-intake` - load before selecting a Munra issue to dispatch or writing a Munra implementation brief, so intake refreshes to current `origin/master` and the brief consults Munra's committed architecture model.
+- `phase-relay` - load before dispatching an issue large enough to need a written plan, at every phase boundary, and before promoting any scout.
 
 ## 14. X mode
 
