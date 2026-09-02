@@ -41,6 +41,15 @@ It is the PR title and body that must stay clean.
 Normal reading of CI: that job often shows a FAILURE on the first run and a SUCCESS on a later one, which is the footer being written away.
 The later run is the one that counts, and a green `CI gate` is the proof.
 Do not chase the red row.
+Two consecutive failures on the SAME head are a different animal: that is a real rejection, not the footer, and it has to be read.
+
+## The PR title and body obey the encoding rule too
+
+The same job runs `check-encoding.mjs --pr-text` over the title and the body, for the same reason the trailer rule exists: they become master's commit message.
+So no arrow, no em or en dash, no smart quote, no emoji, anywhere in either.
+Write `->` not the arrow, `--` not the long dash.
+Swedish letters are allowed and expected - a title stripped of them to be safe just reads as sloppy Swedish.
+This cost a red required check on PR #1217 for two arrows in one line of the description.
 
 ## When a review names a surface, fix THAT surface
 
@@ -78,9 +87,11 @@ hadhud works the same issue list in parallel.
 Issue #888 became wasted work because he landed #925 while our PR was open.
 The check is cheap and belongs first, not afterwards.
 
-The other half of that protection is the title marker.
-Mark the issue `[in progress]` in its TITLE when taking it, restore the title when stopping, and leave `[almost done]` when it is nearly finished.
-Checking only protects you; marking protects the other party.
+The other half of that protection is claiming the issue, because checking only protects you while claiming protects the other party.
+Do NOT do it in the title.
+`.claude/rules/issues.md` (landed 2026-09-01) forbids status in a title outright - it rots the moment it is true and cannot be filtered - and that rule is the binding contract for an agent, above this skill.
+Assign the issue to yourself instead: filterable, visible to whoever looks next, and named by those rules as a legitimate signal alongside labels and the linked PR.
+Checking alone is not enough to prevent a collision: on 2026-09-02 the open-PR list was clean at intake and a parallel session opened its PR for the same issue seven minutes before our commit, so a full build and review round was wasted.
 
 ## Verify against the MERGED tree
 
@@ -122,6 +133,11 @@ After a change touching auth or boot, search ALL spec files for inline fixtures,
 The overlap assertions in `dashboard-sync-status-header.spec.ts` fail inside a worktree because fonts do not load - "outside of Vite serving allow list" - which changes text geometry.
 They are green in CI.
 Check against CI on another PR before chasing them, and remember the converse: a locally green suite does not prove CI.
+
+Reproducing such a failure on master LOCALLY proves nothing about master.
+The font artifact reproduces there too, so the experiment cannot tell a real master defect from the local one, and concluding "it fails on master, therefore master is broken" earns a bogus issue against a healthy branch.
+What settles it is CI on the same base, or the dev server's own log: `DEBUG=pw:webserver` prints the "outside of Vite serving allow list" lines that name the artifact directly.
+A fresh worktree that borrows `node_modules` by symlink is exactly the shape that triggers it.
 
 A fresh worktree has no `node_modules`, and vitest and playwright fail at startup without them.
 Link them with `ln -s /home/user/Munra/apps/verification-ui-dd/node_modules <worktree>/apps/verification-ui-dd/node_modules`.
