@@ -3,7 +3,7 @@ name: issue-flow
 description: >-
   Agent-only procedure for driving one Munra issue to a PR at the lowest defensible cost, invoked explicitly as "/issue-flow <issue-number>" (never auto-triggered).
   Load when the captain says "/issue-flow <N>" or otherwise asks to run a Munra issue through this named flow.
-  Owns the free triage gate that decides how many workers an issue gets, the two-worker default shape, the model policy, the one-review-round rule, and the cost rules that keep a worker count from inflating.
+  Owns the free triage gate that decides how many workers an issue gets, the two-worker default shape, the model policy, the two-round review ceiling, and the cost rules that keep a worker count from inflating.
   Does not own Munra's architecture protocol (munra-architecture-intake), the general plan/build/review relay (phase-relay), or reviewing someone else's finished diff.
 user-invocable: true
 metadata:
@@ -74,10 +74,15 @@ Builders on this flow have repeatedly flagged their own weak spots, and the revi
 Require falsifiability from both sides: every new test must be proven to fail without its fix, and the reviewer re-runs the mutations itself rather than trusting the claim.
 A test that passes either way is a finding, not a test.
 
-**One review round.** Findings go back to the SAME builder, which still has the context.
-A second review runs only when the fix changed the shape of the diff.
-When the fix is small, the builder's own RED/GREEN evidence for exactly the named findings is the proof, and a second cold read is 150k for a paragraph of reassurance.
-A review that surfaces a genuinely new class of problem stops the flow and goes to the captain, never a third round.
+**Two review rounds, hard ceiling.** Findings go back to the SAME builder, which still has the context.
+Round two exists to verify that fix, and it is the last one: after it the PR opens, whatever round two found.
+There is no third round, and no exception earns one - not a safety-relevant surface, not a second edit to a shared seam, not an unresolved signal.
+Munra PRs are reviewed thoroughly by hadhud before anything reaches master, so an open question travels to the PR body where that review will see it, and the flow does not buy the answer itself.
+
+That ceiling is a cost rule, and it was written after issue #1233 ran to three rounds and about 1.2M tokens against an 850k average per landed PR.
+Each extra round did find something real; the point is that the PR review would have found them too, later and for free.
+When round two leaves something unresolved, name it plainly in the PR body with the measurements taken so far - an honest open question in front of a human reviewer is the cheap outcome, a silent one is the failure.
+Escalate to the captain instead of opening only when what round two found is genuinely unsafe to put in front of a reviewer at all.
 
 ## 6. Cost rules
 
