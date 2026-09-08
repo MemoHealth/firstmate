@@ -411,7 +411,7 @@ These skills are not captain-invocable; load them only at their precise triggers
 - `firstmate-codexapp` - load before coordinating a visible Codex Desktop thread, evaluating a Codex App backend request, or reconciling Codex Desktop host-tool smoke evidence for Firstmate work.
 - `firstmate-coding-guidelines` - load before changing firstmate's shared, tracked material, as defined by section 1's list, whether editing directly or briefing a crewmate for a firstmate-repo task.
 - `munra-architecture-intake` - load before selecting a Munra issue to dispatch or writing a Munra implementation brief, so intake refreshes to current `origin/master` and the brief consults Munra's committed architecture model.
-- `phase-relay` - load before dispatching an issue large enough to need a written plan, at every phase boundary, and before promoting any scout.
+- `phase-relay` - load before dispatching an issue large enough to need a written plan, at every phase boundary, before opening a PR from relay work, and before promoting any scout.
 
 ## 14. X mode
 

@@ -30,7 +30,7 @@ Do not write a dispatch profile for a relay this home cannot run.
 ## 2. Write this home's per-phase profiles
 
 `config/crew-dispatch.json` is this home's local, gitignored routing file, and `docs/configuration.md` owns its schema.
-The profile content is owned by `phase-relay` section 7; read the snippet from there and write it, rather than composing a second copy that can drift.
+The profile content is owned by `phase-relay` section 8; read the snippet from there and write it, rather than composing a second copy that can drift.
 
 - File absent: write the snippet, then validate it with `jq . config/crew-dispatch.json`.
 - File present: never overwrite it silently. Report what the current file routes, what the relay expects, and ask one question naming the concrete difference. A home may have deliberate local rules, and they outrank the default snippet.

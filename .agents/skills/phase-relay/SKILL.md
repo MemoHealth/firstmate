@@ -114,7 +114,30 @@ Spawn a fresh reviewer instead when round one was large or the fix changed the s
 A finding the build worker disputes is evidence to weigh, not an order to obey.
 Resolve it on the code, and escalate an unresolved disagreement to the captain with both positions rather than letting either side win by persistence.
 
-## 7. Per-phase profiles
+## 7. The last review pass runs on Fable
+
+The review phase is not finished until its FINAL pass has been read by a Fable reviewer.
+
+This is a model pin on the existing review gate, not an extra gate.
+`AGENTS.md` section 7 forbids stacking serial manual reviews, and this does not add one: when the review phase already ran on Fable, the requirement is met and nothing further happens.
+It bites only when earlier rounds ran on another model, and then the phase is simply not complete until a Fable reviewer has read the final diff.
+
+The reason is evidence, not preference.
+On 2026-09-08 five branches were driven through plan, build and independent review, and every one was declared safe to open.
+The repo maintainer then found six real defects in them: four tests that were green for the wrong reason, a migration race against the revision still serving traffic, and a bug one of the changes had itself introduced by widening a cleanup from "abort now" to "abort in five seconds" without enumerating which teardowns that covered.
+Every one of those reviews was independent and cold.
+None of them was on a different model from the builder.
+Independence of context did not buy independence of blind spot.
+
+Give the Fable pass the final diff, the issue, and the earlier reviewers' own conclusions as claims to attack rather than as findings to trust.
+Tell it explicitly that previous reviewers passed the branch and that it is there because same-shaped reviewers miss same-shaped defects.
+The question that has earned its place in every such brief is: what could be deleted from the production code without turning this test red?
+That phrasing, not "does the test cover this line", is what exposed the four empty tests above.
+
+Resolve the pin through the ordinary dispatch-profile path (`AGENTS.md` section 4), or, when the relay is running as in-process agents rather than spawned crewmates, by pinning the reviewer's model on the call itself.
+Never ask a live worker to switch model mid-conversation.
+
+## 8. Per-phase profiles
 
 The relay chooses models through the ordinary dispatch-profile path; it does not add a second routing mechanism.
 `docs/configuration.md` owns the schema, and this is a starting point for a home's local `config/crew-dispatch.json`:

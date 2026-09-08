@@ -63,6 +63,9 @@ Revisit if a builder starts producing findings a reviewer has to fix twice.
 
 Resolve the pin through the ordinary dispatch-profile path (`AGENTS.md` section 4), never by asking a live worker to switch model mid-conversation.
 
+The review phase's FINAL pass runs on Fable; `phase-relay` section 7 owns that rule and the evidence behind it.
+
+
 ## 5. Review, fix, and when to stop
 
 The reviewer must be COLD and must never see the builder's transcript, only the diff, the issue and the surrounding code.
